@@ -1,88 +1,64 @@
 /**
  * A Simple (tiny) JSONP library
  *
- * Usage: TinyP.load(url, callbackFunction);
+ * Usage: new TinyP(url, callbackFunction);
  *
  * @author Mike Singleton
  *
  * Todos:
- *   - Don't execute until all JS is loaded
  *   - Have url include ? to indicate where to place the callback function (like jQuery)
  */
 
-// Make JSLint happy
-/*global window,document */
+/**
+ * TinyP constructor
+ * @constructor
+ * @param {string} url to call
+ * @param {function()} callback function to be executed after the data is fetched 
+ */
+function TinyP(url, callback) {
+  this.url = url;
+  this.callback = callback;
+  this.internalCallback =  this.generateCallback();
+  
+  // Drop the script on the page
+  var script = this.generateScript();
+  script.setAttribute('src', url + '&callback=TinyP.' + this.internalCallback);
+  this.script = document.getElementsByTagName('head')[0].appendChild(script);
+}
 
-(function() {
-  var TinyP = {
-    head: document.getElementsByTagName('head')[0],
-    callbacks: {},
-    scriptTags: {},
-    
-    /* Generate a random function name */
-    generateRandName: function() {
-      var name = '';
-      var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$_';
-      
-      for(var i = 0; i < 15; i++) {
-        name += possible.charAt(Math.floor(Math.random() * possible.length));
-      }
-      
-      return name;
-    },
-    
-    /* Generate a script tag */
-    generateScript: function() {
-      var script = document.createElement('script');
-      script.setAttribute('type', 'text/javascript');
-      return script;
-    },
-    
-    /* Add the script to the end of the head */
-    addScript: function(script, name) {
-      var tag = this.head.appendChild(script);
-      this.scriptTags[name] = tag;
-    },
-    
-    /* Generate a random callback function to pass as the JSONP callback */
-    generateCallback: function() {
-      var script = this.generateScript();
-      var random = this.generateRandName();
-      
-      script.innerHTML = "function " + random + "(data) { TinyP.execute('" + random + "', data); }";
-      this.addScript(script, random);
-      
-      return random;
-    },
-    
-    /* 
-     * Execute the callback associated with the random callback function and
-     * clean up all of the inserted JS afterwards
-     */
-    execute: function(callbackName, data) {
-      this.callbacks[callbackName](data);
-     
-      // Cleanup
-      delete this.callbacks[callbackName];
-      var script = this.scriptTags[callbackName];
-      var urlScript = this.scriptTags['_url_' + callbackName];
-      script.parentNode.removeChild(script);
-      urlScript.parentNode.removeChild(urlScript);
-    },
-    
-    /* 
-     * Take a url and callback function and generate a random JSONP callback
-     * and inject the script into the head
-     */
-    load: function(url, callback) {
-      var callbackName = this.generateCallback();
-      this.callbacks[callbackName] = callback;
-      
-      var script = this.generateScript();
-      script.setAttribute('src', url + '&callback=' + callbackName);
-      this.addScript(script, "_url_" + callbackName);
+TinyP.prototype = {
+  /* Generate a random function name */
+  generateRandName: function() {
+    var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$_';
+    var name = '';
+
+    for(var i = 0; i < 15; i++) {
+      name += possible.charAt(Math.floor(Math.random() * possible.length));
     }
-  };
 
-  window.TinyP = TinyP;
-})();
+    return name;
+  },
+
+  /* Generate a script tag */
+  generateScript: function() {
+    var script = document.createElement('script');
+    script.setAttribute('type', 'text/javascript');
+    return script;
+  },
+  
+  /* Generate a random callback function to pass as the JSONP callback */
+  generateCallback: function() {
+    var random = this.generateRandName();
+    var self = this;
+    
+    TinyP[random] = function(data) {
+      self.callback(data);
+
+      // Cleanup
+      delete TinyP[random];
+      self.script.parentNode.removeChild(self.script);
+    }
+
+    return random;
+  }
+}
