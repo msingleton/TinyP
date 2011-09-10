@@ -21,44 +21,31 @@ function TinyP(url, callback) {
   this.internalCallback =  this.generateCallback();
   
   // Drop the script on the page
-  var script = this.generateScript();
+  var script = document.createElement('script');
+  script.setAttribute('type', 'text/javascript');
   script.setAttribute('src', url + '&callback=TinyP.' + this.internalCallback);
   this.script = document.getElementsByTagName('head')[0].appendChild(script);
 }
 
 TinyP.prototype = {
-  /* Generate a random function name */
-  generateRandName: function() {
-    var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$_';
-    var name = '';
-
-    for(var i = 0; i < 15; i++) {
-      name += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-
-    return name;
-  },
-
-  /* Generate a script tag */
-  generateScript: function() {
-    var script = document.createElement('script');
-    script.setAttribute('type', 'text/javascript');
-    return script;
-  },
-  
   /* Generate a random callback function to pass as the JSONP callback */
   generateCallback: function() {
-    var random = this.generateRandName();
+    var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz$_';
+    var randomName = '';
+
+    for(var i = 0; i < 15; i++) {
+      randomName += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
     var self = this;
     
-    TinyP[random] = function(data) {
+    TinyP[randomName] = function(data) {
       self.callback(data);
 
       // Cleanup
-      delete TinyP[random];
+      delete TinyP[randomName];
       self.script.parentNode.removeChild(self.script);
     }
 
-    return random;
+    return randomName;
   }
 }
